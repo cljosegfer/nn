@@ -99,3 +99,24 @@ class ggNN(NN):
             pass
 
     return yhat
+
+class sggNN(ggNN):
+  def __init__(self, tau):
+    super().__init__()
+    self.tau = tau
+
+  def _predict(self, X, mode, y = None):
+    n = X.shape[0]
+    yhat = torch.zeros(n)
+    delta = torch.cdist(self.X, X).to(self.DEVICE)
+    for i in tqdm(range(n)):
+      vizinhos = self._gg(delta[:, i], btsz = self.N // 4)
+      weights = self._softmin(delta[vizinhos, i])
+      if mode == 'q':
+        yhat[i] = torch.sum(weights[y[i] == self.y[vizinhos]])
+
+    return yhat
+
+  def _softmin(self, x):
+    return torch.exp(-self.tau * x) / torch.sum(torch.exp(-self.tau * x))
+  
